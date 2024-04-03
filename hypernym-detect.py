@@ -17,9 +17,10 @@ import time
 import torch
 import torch.nn as nn
 
+import exception_handler as exc
 import data_loader as dl
 import models.cnn as cnn
-import models.rcnn as rcnn
+import models.crnn as crnn
 
 
 """
@@ -51,8 +52,8 @@ def train(net, device, criterion, optimizer, train_data, eval_data):
             loss.backward()
             optimizer.step()
             running_loss += loss.item()
-            if i % 50 == 0:
-                print(f'    ({round(time.time() - epoch_start, 1)} s) | Batch: {i} | Train Loss: {round(running_loss / (i+1), 8)}', end='\r')
+            if i % 25 == 0:
+                print(f'    ({round(time.time() - epoch_start, 1)} s) | Batch: {i} | Train Loss: {round(running_loss / (i+1), 6)}', end='\r')
         train_loss = running_loss/len(train_data)
 
         # Evaluate model on validation set
@@ -66,12 +67,11 @@ def train(net, device, criterion, optimizer, train_data, eval_data):
         eval_losses.append(eval_loss)
 
         # Print losses for each epoch
-        print(f'    ({round(time.time() - epoch_start, 1)} s) | Epoch: {epoch} | Train Loss: {round(train_loss, 8)} | Eval Loss: {round(eval_loss, 8)}')
+        print(f'    ({round(time.time() - epoch_start, 1)} s) | Epoch: {"0" if epoch<10 else ""}{epoch} | Train Loss: {round(train_loss, 6)} | Eval Loss: {round(eval_loss, 6)}')
 
-        # Early stopping if validation loss increases
-        check_prior_losses = 3
-        avg_last_losses = sum(eval_losses[-check_prior_losses-1:-1])/check_prior_losses
-        if (len(eval_losses) > 5) and (eval_losses[-1] > avg_last_losses): break
+        # Stop early if validation losses are increasing
+        if len(eval_losses) > 2 and eval_losses[-1] > eval_losses[-2] and eval_losses[-2] > eval_losses[-3]:
+            break
 
     print(f'Training Time: {round(time.time() - start, 1)} s')
     return train_loss, eval_loss
@@ -107,7 +107,7 @@ def test(net, device, criterion, test_data):
 
     avg_loss = running_loss/total
     accuracy = correct/total
-    print(f'    Test Loss: {round(running_loss / (i+1), 8)} | Accuracy: {round(correct/total, 6)*100}%', end='\r')
+    print(f'    ({round(time.time() - start, 1)} s) Test Loss: {round(avg_loss, 6)} | Accuracy: {round(accuracy, 6)*100}%', end='\r')
     print(f'\nTest Time: {round(time.time() - start, 1)} s')
     return avg_loss, accuracy
 
@@ -117,38 +117,44 @@ def test(net, device, criterion, test_data):
 """
 def main():
     start = time.time()
-    print("----------------------------------------------------------------")
-    datafile = 'data\compiled_data.csv'
+    datasets = ['data/bless.tsv', 'data/eval.tsv', 'data/leds.tsv', 'data/shwartz.tsv', 'data/wbless.tsv']
     train_frac = 0.8
     batch_size = 64
-    learning_rate = 0.0002
-    weight_decay = 2e-5
-    print(f'Train Frac: {train_frac} | Batch Size: {batch_size} | LR: {learning_rate} | WD: {weight_decay}')
+    learning_rate = 0.00005
+    weight_decay = 0.00001
+    print("----------------------------------------------------------------")
 
     # Load data and create dataloaders
-    train_data, eval_data, test_data, w_len = dl.load_data(datafile, train_frac, batch_size)
+    train_data, eval_data, test_data, w_len, dict_len = dl.load_data(datasets, train_frac, batch_size)
+    print("----------------------------------------------------------------")
 
     # Initialize model, loss function, and optimizer
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    net = cnn.Net(w_len).to(device)
-    # net = rcnn.Net(w_len).to(device)
+    # net = cnn.Net(w_len).to(device)
+    net = crnn.Net(w_len, dict_len).to(device)
     criterion = nn.BCELoss()
     optimizer = torch.optim.Adam(net.parameters(), lr=learning_rate, weight_decay=weight_decay)
 
-    # Train and test model
+    # Print hyperparameters
+    print(f'Train Frac: {train_frac} | Batch Size: {batch_size} | LR: {learning_rate} | WD: {weight_decay}')
     print("----------------------------------------------------------------")
+
+    # Train model
     train_loss, eval_loss = train(net, device, criterion, optimizer, train_data, eval_data)
     print("----------------------------------------------------------------")
+
+    # Test model
     test_loss, accuracy = test(net, device, criterion, test_data)
+    print("----------------------------------------------------------------")
 
     # Print results
-    print("----------------------------------------------------------------")
     print(f'Train Loss: {round(eval_loss, 8)}')
     print(f' Eval Loss: {round(train_loss, 8)}')
     print(f' Test Loss: {round(test_loss, 8)}')
     print(f'  Accuracy: {round(accuracy, 6)*100}%')
     print(f'Total Time: {round(time.time() - start, 1)} s')
-    print("----------------------------------------------------------------")
+    print("----------------------------------------------------------------\n")
 
 if __name__ == '__main__':
-    main()
+    try: main()
+    except Exception: exc.print_tb()

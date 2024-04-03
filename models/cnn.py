@@ -41,6 +41,8 @@ class Net(nn.Module):
     """
     def forward(self, w1, w2):
         try:
+            w1 = torch.tensor(w1, dtype=torch.float32)
+            w2 = torch.tensor(w2, dtype=torch.float32)
             w1 = self.w_conv(w1.unsqueeze(2))
             w2 = self.w_conv(w2.unsqueeze(2))
             x = torch.cat((w1, w2), 1)
