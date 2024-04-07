@@ -5,13 +5,9 @@ import pandas as pd
 
 
 """
-@brief  Load data from csv file
-        Split data into training, validation, and test sets
-@param  file:       csv file containing data
-        train_frac: fraction of data to use for training
-@return train_ds:   training dataset
-        eval_ds:    validation dataset
-        test_ds:    test dataset
+@brief  Dataset class for hypernym detection
+@param  data.Dataset: PyTorch dataset class
+@param  df: pandas dataframe containing data
 """
 class HypernymDataset(data.Dataset):
     def __init__(self, df):
@@ -28,7 +24,7 @@ class HypernymDataset(data.Dataset):
 
 
 """
-@brief  Load data from csv file
+@brief  Load data from csv file, preprocess data
         Split data into training, validation, and test sets
 @param  file:       csv file containing data
         train_frac: fraction of data to use for training
@@ -42,7 +38,13 @@ def load_data(files, train_frac, batch_size):
     # Compile data from multiple tsv files into a pandas dataframe
     print("Loading Data...")
     df = pd.concat([pd.read_csv(file, sep='\t') for file in files], ignore_index=True)
-    df.drop_duplicates(inplace=True)    # Remove duplicate rows
+    
+    # Lowercase all characters
+    df['word1'] = df['word1'].str.lower()
+    df['word2'] = df['word2'].str.lower()
+    
+    # Remove duplicate rows
+    df.drop_duplicates(inplace=True)
 
     # Order frequency of characters in data from most common to least common
     char_freq = ''.join(df['word1'].values) + ''.join(df['word2'].values)
@@ -74,7 +76,7 @@ def load_data(files, train_frac, batch_size):
 
     # Create dataloaders
     train_dl = data.DataLoader(train_ds, batch_size=batch_size, shuffle=True)
-    eval_dl = data.DataLoader(eval_ds, batch_size=batch_size, shuffle=False)
+    eval_dl = data.DataLoader(eval_ds, batch_size=batch_size, shuffle=True)
     test_dl = data.DataLoader(test_ds, batch_size=batch_size, shuffle=False)
 
     return train_dl, eval_dl, test_dl, w_len, dict_len
