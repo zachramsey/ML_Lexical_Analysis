@@ -51,13 +51,16 @@ def load_data(files, train_frac, batch_size):
     char_freq = pd.Series(list(char_freq)).value_counts()
     char_freq = char_freq.sort_values(ascending=False)
 
+    # Make list of infrequent characters
+    infreq_chars = char_freq[char_freq < 10].index.tolist()
+
     # Create a dictionary
     char_dict = {char: i+1 for i, char in enumerate(char_freq.index)}
     dict_len = len(char_dict) + 1
 
-    # Map characters in data to integer indices
-    df['word1'] = df['word1'].apply(lambda x: [char_dict[char] for char in x])
-    df['word2'] = df['word2'].apply(lambda x: [char_dict[char] for char in x])
+    # Map characters in data to integer indices, removing infrequent characters
+    df['word1'] = df['word1'].apply(lambda x: [char_dict[char] for char in x if char not in infreq_chars])
+    df['word2'] = df['word2'].apply(lambda x: [char_dict[char] for char in x if char not in infreq_chars])
 
     # Pad char sequences to the maximum word length
     w_len = max(df['word1'].apply(len).max(), df['word2'].apply(len).max())
@@ -79,4 +82,5 @@ def load_data(files, train_frac, batch_size):
     eval_dl = data.DataLoader(eval_ds, batch_size=batch_size, shuffle=True)
     test_dl = data.DataLoader(test_ds, batch_size=batch_size, shuffle=False)
 
+    print("Done!")
     return train_dl, eval_dl, test_dl, w_len, dict_len

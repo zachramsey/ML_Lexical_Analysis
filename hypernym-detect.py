@@ -59,8 +59,8 @@ def train(net, device, criterion, optimizer, train_data, val_data):
         print(f'    ({round(time.time() - epoch_start, 1)} s) | Epoch: {"0" if epoch<10 else ""}{epoch} | Train Loss: {round(train_loss, 6)} | Valid Loss: {round(val_loss, 6)}')
 
         # Early stopping heuristic; last validation loss > average over previous 3 epochs
-        if len(val_losses) > 3:
-            if val_loss > sum(val_losses[-3:])/3: break
+        if len(val_losses) > 2:
+            if val_loss > sum(val_losses[-2:])/2: break
         val_losses.append(val_loss)
 
     print(f'Training Time: {round(time.time() - start, 1)} s')
@@ -126,7 +126,7 @@ def main():
     start = time.time()
     datasets = ['data/bless.tsv', 'data/eval.tsv', 'data/leds.tsv', 'data/shwartz.tsv', 'data/wbless.tsv']
     train_frac = 0.8
-    batch_size = 256
+    batch_size = 512 #256
     learning_rate = 0.0005
     weight_decay = 0.00001
     print("----------------------------------------------------------------")
@@ -137,13 +137,10 @@ def main():
 
     # Initialize model, loss function, and optimizer
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    # net = cnn.Net(w_len).to(device)
     net = crnn_embedded.Net(w_len, dict_len).to(device)
-    # net = crnn_onehot.Net(w_len).to(device)
     net.apply(init_weights)
 
     criterion = nn.BCELoss()
-    # optimizer = torch.optim.Adam(net.parameters())
     optimizer = torch.optim.Adam(net.parameters(), lr=learning_rate, weight_decay=weight_decay, amsgrad=True)
 
     # Print hyperparameters

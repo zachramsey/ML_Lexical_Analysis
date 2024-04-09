@@ -24,13 +24,13 @@ class Net(nn.Module):
         self.conv1 = nn.Sequential(
             nn.Conv1d(2*w_len, 8*w_len, 5),
             nn.ReLU(),
-            nn.MaxPool1d(2, 2, 1)
+            nn.MaxPool1d(2, 2, 1),
         )
 
         self.conv2 = nn.Sequential(
             nn.Conv1d(8*w_len, 32*w_len, 3),
             nn.ReLU(),
-            nn.MaxPool1d(2, 2, 1)
+            nn.MaxPool1d(2, 2, 1),
         )
 
         self.flatten = nn.Flatten()
